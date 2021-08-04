@@ -1,0 +1,10 @@
+kaggle
+pydicom
+matplotlib
+notebook
+numpy
+pandas
+opencv-python
+seaborn
+scikit-learn
+efficientnet_pytorch
