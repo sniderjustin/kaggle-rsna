@@ -22,6 +22,7 @@ import time
 import torch
 from torch import nn
 from torch.utils import data as torch_data
+from torch.utils.tensorboard import SummaryWriter
 from sklearn import model_selection as sk_model_selection
 from torch.nn import functional as torch_functional
 import efficientnet_pytorch
@@ -177,13 +178,23 @@ class Trainer:
             "patience": "\nValid score didn't improve last {} epochs."
         }
     
-    def fit(self, epochs, train_loader, valid_loader, save_path, patience):        
+    def fit(self, epochs, train_loader, valid_loader, save_path, patience):
+        # Write to tensorboard
+        writer = SummaryWriter()
+        # Visualize model graph
+        writer.add_graph(self.model, next(iter(train_loader))["X"].to(self.device))
+
         for n_epoch in range(1, epochs + 1):
             self.info_message("EPOCH: {}", n_epoch)
             
             train_loss, train_score, train_time = self.train_epoch(train_loader)
             valid_loss, valid_score, valid_time = self.valid_epoch(valid_loader)
             
+            writer.add_scalar('Loss/train', train_loss, n_epoch)
+            writer.add_scalar('Loss/valid', valid_loss, n_epoch)
+            writer.add_scalar('Accuracy/train', train_score, n_epoch)
+            writer.add_scalar('Accuracy/valid', valid_score, n_epoch)
+
             self.info_message(
                 self.messages["epoch"], "Train", n_epoch, train_loss, train_score, train_time
             )
@@ -206,6 +217,7 @@ class Trainer:
             if self.n_patience >= patience:
                 self.info_message(self.messages["patience"], patience)
                 break
+        writer.close()
             
     def train_epoch(self, train_loader):
         self.model.train()

@@ -7,4 +7,7 @@ pandas
 opencv-python
 seaborn
 scikit-learn
+torch
+torchvision
 efficientnet_pytorch
+tensorboard
