@@ -25,7 +25,7 @@ pip install -r requirements.txt
 Create directory for tensorboard and launch
 ```
 mkdir runs
-tnesorboard --logdir=runs
+tensorboard --logdir=runs
 ```
 
 Run the training proces

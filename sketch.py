@@ -114,7 +114,7 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
         # use EfficientNet
-        self.net = efficientnet_pytorch.EfficientNet.from_name("efficientnet-b0")
+        self.net = efficientnet_pytorch.EfficientNet.from_pretrained("efficientnet-b0")
         # Load weights
         # checkpoint = torch.load("../input/efficientnet-pytorch/efficientnet-b0-08094119.pth")
         # self.net.load_state_dict(checkpoint)
