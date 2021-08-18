@@ -11,3 +11,4 @@ torch
 torchvision
 efficientnet_pytorch
 tensorboard
+scikit-image

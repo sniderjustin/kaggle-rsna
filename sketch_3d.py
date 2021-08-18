@@ -1,3 +1,5 @@
+"""Sample stack of 15 images. Use 15 images for model input."""
+
 import os
 import json
 import glob
@@ -85,25 +87,18 @@ class DataRetriever(torch_data.Dataset):
         _id = self.paths[index]  # Get ID
         patient_path = f"data/train/{str(_id).zfill(5)}/"  # Get path
         channels = []
-        for t in ("FLAIR", "T1w", "T1wCE"): # "T2w"  # Cycle through data types
+        for t in ("FLAIR", "T1w", "T1wCE", "T2w"): # "T2w"  # Cycle through data types
             t_paths = sorted(  # Get sorted list of file paths
                 glob.glob(os.path.join(patient_path, t, "*")), 
                 key=lambda x: int(x[:-4].split("-")[-1]),
             )
-            # start, end = int(len(t_paths) * 0.475), int(len(t_paths) * 0.525)
+            # Get list of index values
             x = len(t_paths)  # Get number of paths
-            if x < 10:
-                r = range(x)  # Set range of paths
-            else:
-                d = x // 10  # Sample every 10th image
-                r = range(d, x - d, d)
-                
-            channel = []
-            # for i in range(start, end + 1):
-            for i in r:  # Loop through images. Downsample, normalize, and append. 
-                channel.append(cv2.resize(load_dicom(t_paths[i]), (256, 256)) / 255)
-            channel = np.mean(channel, axis=0)  # take average
-            channels.append(channel)  # append average
+            idxs = sorted(random.choices(list(range(x)), k=15))
+            # Randomly choose 15 samples
+            # Normalize each image
+            for idx in idxs:
+                channels.append(cv2.resize(load_dicom(t_paths[idx]), (256, 256)) / 255)
             
         y = torch.tensor(self.targets[index], dtype=torch.float)  # Targets to tensor
         
@@ -114,7 +109,7 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
         # use EfficientNet
-        self.net = efficientnet_pytorch.EfficientNet.from_pretrained("efficientnet-b0")
+        self.net = efficientnet_pytorch.EfficientNet.from_pretrained("efficientnet-b7")
         # Load weights
         # checkpoint = torch.load("../input/efficientnet-pytorch/efficientnet-b0-08094119.pth")
         # self.net.load_state_dict(checkpoint)
@@ -122,10 +117,17 @@ class Model(nn.Module):
         n_features = self.net._fc.in_features
         # Add fully connected layer going from efficientnet to one out value
         self.net._fc = nn.Linear(in_features=n_features, out_features=1, bias=True)
+
+        # Set inputs channels to accept more channels
+        self.net._conv_stem.in_channels = 4*15  # 4 image types and 15 of each image
+        # Pretrained weights only for 3 channels
+        # Copy weights for all channels
+        self.net._conv_stem.weight = torch.nn.Parameter(torch.cat([self.net._conv_stem.weight for x in range((4*15//3))], axis=1))
     
     def forward(self, x):
         out = self.net(x)
         return out
+
 
 class LossMeter:
     def __init__(self):
@@ -136,7 +138,7 @@ class LossMeter:
         self.n += 1
         # incremental update
         self.avg = val / self.n + (self.n - 1) / self.n * self.avg
-
+        
         
 class AccMeter:
     def __init__(self):
@@ -351,7 +353,7 @@ if __name__=='__main__':
     )
 
     history = trainer.fit(
-        20, 
+        100000, 
         train_loader, 
         valid_loader, 
         f"best-model-0.pth", 
